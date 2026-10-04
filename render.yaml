@@ -1,0 +1,48 @@
+# SL Tech Radar — Render Blueprint (real mode)
+# Usage: Render Dashboard → New → Blueprint → select this repo.
+# After deploy: paste API keys in Dashboard → sl-tech-radar-backend → Environment
+# (NEBIUS_API_KEY, TAVILY_API_KEY, LANGSMITH_API_KEY — marked sync:false below,
+# so Render leaves them empty for you to fill; keys never live in git).
+
+services:
+  - type: web
+    name: sl-tech-radar-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: sl-tech-radar-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: sl-tech-radar-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: sl-tech-radar-db
+          property: databaseName
+      - key: DB_USER
+        fromDatabase:
+          name: sl-tech-radar-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: sl-tech-radar-db
+          property: password
+      - key: APP_MOCK_ENABLED
+        value: "false"
+      - key: APP_CORS_ORIGINS
+        value: https://sujanthan242.github.io
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+
+databases:
+  - name: sl-tech-radar-db
+    plan: free
