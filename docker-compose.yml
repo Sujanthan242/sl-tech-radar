@@ -1,0 +1,59 @@
+# SL Tech Radar — full stack
+# Usage:  docker compose up --build
+# Keys pass through from your shell env (${NEBIUS_API_KEY:-}) — never baked in.
+# The frontend is built with NEXT_PUBLIC_MOCK=true by default: it calls the
+# backend live at http://backend:8080 and falls back to mock data on failure.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sl-tech-radar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sltechradar
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radar-dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar -d sltechradar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: sl-tech-radar-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_NAME: sltechradar
+      DB_USER: radar
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-radar-dev}
+      NEBIUS_API_KEY: ${NEBIUS_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        NEXT_PUBLIC_MOCK: ${NEXT_PUBLIC_MOCK:-true}
+    container_name: sl-tech-radar-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

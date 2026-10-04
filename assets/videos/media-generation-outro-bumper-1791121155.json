@@ -1,0 +1,4 @@
+{
+  "text": "{\"error_format_version\":1,\"error\":{\"code\":\"invalid_resume_id\",\"retryable\":false,\"detail\":\"The requested media snapshot could not be resumed.\",\"downstream_status\":400,\"attempt_id\":\"f688ac1f-312a-45c5-a452-548e1b07304c\",\"origin_stage\":\"snapshot_resolution\",\"root_cause_known\":true,\"fallback_emitted\":true,\"source_error_code\":\"invalid_resume_id\",\"failure_kind\":\"snapshot_alias_unresolved\",\"source_retryable\":false,\"downstream_request_id\":\"f688ac1f-312a-45c5-a452-548e1b07304c\",\"generated_attachment_count\":0}}",
+  "attachments": []
+}

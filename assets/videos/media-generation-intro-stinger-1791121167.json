@@ -1,0 +1,4 @@
+{
+  "text": "{\"error_format_version\":1,\"error\":{\"code\":\"mango_error\",\"retryable\":true,\"detail\":\"The media service returned an error. Please retry.\",\"downstream_status\":503,\"attempt_id\":\"ab476356-85bd-4732-8a48-d390a1398479\",\"origin_stage\":\"media_output\",\"root_cause_known\":true,\"fallback_emitted\":true,\"source_error_code\":\"server_error\",\"failure_kind\":\"no_generated_media\",\"source_retryable\":true,\"downstream_request_id\":\"ab476356-85bd-4732-8a48-d390a1398479\",\"generated_attachment_count\":0}}",
+  "attachments": []
+}
