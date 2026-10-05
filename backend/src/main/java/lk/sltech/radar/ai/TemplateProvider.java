@@ -17,6 +17,12 @@ import java.util.regex.Pattern;
 public class TemplateProvider implements AiProvider {
 
     private final ObjectMapper mapper = new ObjectMapper();
+    /**
+     * Marker text identifying a placeholder draft generated when the pipeline
+     * had zero candidates for a category. DraftWorkflowService filters these
+     * out of the review queue so users see an honest empty state instead.
+     */
+    public static final String EMPTY_MARKER = "No fresh opportunities surfaced this week";
     private static final Pattern CANDIDATES_BLOCK =
             Pattern.compile("<<<CANDIDATES_JSON\\s*(.*?)\\s*>>>", Pattern.DOTALL);
     private static final Pattern CATEGORY_LINE =
@@ -55,7 +61,7 @@ public class TemplateProvider implements AiProvider {
                 }
             }
             if (count == 0) {
-                md.append("_No fresh opportunities surfaced this week — check back next Saturday._\n");
+                md.append("_").append(EMPTY_MARKER).append("  — check back next Saturday._\n");
             }
             md.append("\n*Never miss a deadline that matters.*\n");
 
