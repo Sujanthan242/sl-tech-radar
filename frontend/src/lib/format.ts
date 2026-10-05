@@ -23,7 +23,7 @@ export function countdownLabel(deadline: string | null, now: Date = new Date()):
 
 export function isUrgent(deadline: string | null, now: Date = new Date()): boolean {
   const d = daysUntil(deadline, now);
-  return d !== null && d >= 0 && d <= 7;
+  return d !== null && d >= 0 && d <= 3;
 }
 
 export function prettyDate(ymd: string | null): string {
