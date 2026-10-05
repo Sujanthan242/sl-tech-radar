@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,9 +51,22 @@ public class DraftService {
     /** Cache entry kept in Caffeine (small, detached from JPA). */
     public record CachedDraft(String contentMd, String sourcesJson, String modelUsed, long tokensUsed) {}
 
+    /**
+     * Generates (or reuses) one draft section for the category.
+     *
+     * @return the draft, or {@code null} when the category has no candidates —
+     *         we no longer save empty placeholder drafts; the review queue
+     *         shows an honest empty state instead.
+     */
+    @Nullable
     @Transactional
     public DraftSection generateDraft(Edition edition, Category category,
                                       List<Candidate> candidates, String feedback, String traceRunId) {
+        if (candidates.isEmpty()) {
+            log.info("Skipping draft for {} {} — no candidates, no placeholder saved",
+                    edition.getWeek(), category);
+            return null;
+        }
         String key = cacheKey(edition.getWeek(), category,
                 candidates.stream().map(Candidate::getUrl).sorted().toList(), feedback);
 
