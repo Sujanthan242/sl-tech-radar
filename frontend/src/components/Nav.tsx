@@ -4,23 +4,35 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { mockActive } from "@/lib/api";
+import { useTheme, useLite } from "@/lib/prefs";
+import { useI18n, LANGS, nextLang } from "@/lib/i18n";
 
-const LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/discover", label: "Discover" },
-  { href: "/review", label: "Review" },
-  { href: "/editions", label: "Editions" },
-  { href: "/settings", label: "Settings" },
-];
+/** Compact header icon button — shared by the theme/lang/lite toggles. */
+export const HEADER_ICON_BTN =
+  "w-9 h-9 grid place-items-center rounded-full border border-[rgba(0,229,255,0.25)] text-[var(--color-muted)] hover:text-[var(--color-neon)] hover:border-[var(--color-neon)] transition-colors shrink-0 text-[1.05rem]";
 
 export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const { lite, toggleLite } = useLite();
+  const { lang, setLang, t } = useI18n();
+
+  const LINKS = [
+    { href: "/", label: t.nav.dashboard },
+    { href: "/discover", label: t.nav.discover },
+    { href: "/review", label: t.nav.review },
+    { href: "/editions", label: t.nav.editions },
+    { href: "/settings", label: t.nav.settings },
+  ];
+
+  const langShort = LANGS.find((l) => l.id === lang)?.short ?? "EN";
+  const nextShort = LANGS.find((l) => l.id === nextLang(lang))?.short ?? "த";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[rgba(4,7,15,0.85)] backdrop-blur-xl border-b border-[rgba(0,229,255,0.1)]">
-      <div className="max-w-[1280px] mx-auto px-5 md:px-8 h-[68px] flex items-center justify-between">
-        <Link href="/" className="font-display text-[1.45rem] font-extrabold tracking-wide">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--color-nav)] backdrop-blur-xl border-b border-[rgba(0,229,255,0.1)]">
+      <div className="max-w-[1280px] mx-auto px-5 md:px-8 h-[68px] flex items-center justify-between gap-2">
+        <Link href="/" className="font-display text-[1.15rem] sm:text-[1.45rem] font-extrabold tracking-wide shrink-0">
           SL Tech <span className="glow-text">Radar</span>
         </Link>
 
@@ -44,16 +56,41 @@ export default function Nav() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {mockActive && (
-            <span className="chip chip-verify hidden sm:inline-flex" title="Serving bundled mock data — no backend needed">
-              ◈ mock mode
+            <span className="chip chip-verify hidden sm:inline-flex" title={t.nav.mockModeTitle}>
+              {t.nav.mockMode}
             </span>
           )}
           <button
+            className={HEADER_ICON_BTN}
+            onClick={() => setLang(nextLang(lang))}
+            aria-label={`${t.nav.cycleLang} (${nextShort})`}
+            title={`${t.nav.cycleLang} — ${nextShort}`}
+          >
+            <span aria-hidden="true" className="text-[0.95rem] font-bold">{langShort}</span>
+          </button>
+          <button
+            className={HEADER_ICON_BTN}
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? t.nav.toLight : t.nav.toDark}
+            title={theme === "dark" ? t.nav.lightMode : t.nav.darkMode}
+          >
+            <span aria-hidden="true">{theme === "dark" ? "☀️" : "🌙"}</span>
+          </button>
+          <button
+            className={`${HEADER_ICON_BTN} ${lite ? "!text-[var(--color-neon)] !border-[var(--color-neon)]" : ""}`}
+            onClick={toggleLite}
+            aria-pressed={lite}
+            aria-label={lite ? t.nav.liteDisable : t.nav.liteEnable}
+            title={t.nav.liteMode}
+          >
+            <span aria-hidden="true">🪶</span>
+          </button>
+          <button
             className="md:hidden flex flex-col gap-[5px] p-2"
             onClick={() => setOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={t.nav.toggleMenu}
             aria-expanded={open}
           >
             <span className="w-[24px] h-[2px] bg-[var(--color-ink)] rounded" />

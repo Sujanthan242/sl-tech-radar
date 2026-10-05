@@ -7,6 +7,7 @@ import RadarHero3D from "@/components/RadarHero3D";
 import { PageHeader, Stat, StatusDot, Meter, ProgressBar, SectionLabel, Toast } from "@/components/ui";
 import { startRun, getRun, getProviders } from "@/lib/api";
 import { mockCandidates, mockEditions, MOCK_EDITION } from "@/lib/mock";
+import { useI18n } from "@/lib/i18n";
 import type { ProviderInfo, RunInfo, UsageInfo } from "@/lib/types";
 import { compactNum, daysUntil, prettyDateTime, timeAgo, usd } from "@/lib/format";
 
@@ -35,6 +36,7 @@ const STAGE_LOGS: { status: string; lines: string[] }[] = [
 
 export default function Dashboard() {
   const router = useRouter();
+  const { t } = useI18n();
   const [run, setRun] = useState<RunInfo | null>(null);
   const [running, setRunning] = useState(false);
   const [chain, setChain] = useState<ProviderInfo[]>([]);
@@ -69,9 +71,9 @@ export default function Dashboard() {
         if (pollRef.current) clearInterval(pollRef.current);
         setRunning(false);
         if (s.status === "failed") {
-          setToast("Run failed — check the pipeline and try again");
+          setToast(t.dashboard.toastFailed);
         } else {
-          setToast(`Radar run complete — ${s.stats.draftsReady} drafts ready for review`);
+          setToast(t.dashboard.toastDone(s.stats.draftsReady));
         }
       }
     }, 900);
@@ -93,41 +95,41 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="SL Tech Students Weekly · ops console"
-        title={<>This week’s <span className="glow-text">radar</span></>}
-        sub="Discover → draft → your 15-minute review → Substack. One button runs the whole Saturday pipeline."
+        eyebrow={t.dashboard.eyebrow}
+        title={<>{t.dashboard.titleA} <span className="glow-text">{t.dashboard.titleB}</span></>}
+        sub={t.dashboard.sub}
         action={
-          <span className="chip chip-new">◈ edition {MOCK_EDITION} · live</span>
+          <span className="chip chip-new">{t.dashboard.editionLive(MOCK_EDITION)}</span>
         }
       />
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
         {/* status card */}
         <div className="card p-6 rise-in">
-          <SectionLabel>Radar status</SectionLabel>
+          <SectionLabel>{t.dashboard.radarStatus}</SectionLabel>
           <div className="grid grid-cols-2 gap-5">
-            <Stat label="Last run" value={mockEditions[0] ? timeAgo(mockEditions[0].createdAt) : "—"} hint={prettyDateTime(mockEditions[0].createdAt)} />
-            <Stat label="Items found" value={mockCandidates.length} hint={`${mockCandidates.filter((c) => c.dedupStatus === "NEW").length} net-new`} accent />
-            <Stat label="Closing ≤ 7d" value={closingSoon} hint="deadline-first, always" />
-            <Stat label="Drafts ready" value={4} hint="4 of 4 sections" />
+            <Stat label={t.dashboard.lastRun} value={mockEditions[0] ? timeAgo(mockEditions[0].createdAt) : "—"} hint={prettyDateTime(mockEditions[0].createdAt)} />
+            <Stat label={t.dashboard.itemsFound} value={mockCandidates.length} hint={t.dashboard.netNew(mockCandidates.filter((c) => c.dedupStatus === "NEW").length)} accent />
+            <Stat label={t.dashboard.closingSoon} value={closingSoon} hint={t.dashboard.deadlineFirst} />
+            <Stat label={t.dashboard.draftsReady} value={4} hint={t.dashboard.ofSections} />
           </div>
           <div className="mt-6 pt-5 border-t border-[rgba(0,229,255,0.12)] flex items-center justify-between text-sm">
-            <span className="text-[var(--color-muted)]">Edition status</span>
-            <span className="chip chip-verify">◐ in review</span>
+            <span className="text-[var(--color-muted)]">{t.dashboard.editionStatus}</span>
+            <span className="chip chip-verify">{t.dashboard.inReview}</span>
           </div>
         </div>
 
         {/* generate card */}
         <div className="card p-6 rise-in flex flex-col" style={{ animationDelay: "0.08s" }}>
-          <SectionLabel>Saturday pipeline</SectionLabel>
-          <p className="font-display text-xl font-bold mb-1">Generate this week’s radar</p>
+          <SectionLabel>{t.dashboard.saturdayPipeline}</SectionLabel>
+          <p className="font-display text-xl font-bold mb-1">{t.dashboard.generateTitle}</p>
           <p className="text-sm text-[var(--color-muted)] mb-5">
-            Tavily discovery → deterministic dedup → one structured draft call per category.
+            {t.dashboard.generateDesc}
           </p>
 
           {!run && !running && (
             <button className="btn-glow w-full text-lg py-5" onClick={handleGenerate}>
-              ⚡ Generate this week’s radar
+              {t.dashboard.generateBtn}
             </button>
           )}
 
@@ -135,9 +137,9 @@ export default function Dashboard() {
             <div className="flex-1 flex flex-col">
               <ProgressBar
                 value={run?.progress ?? 0}
-                label={run ? `${run.status.replace("_", " ")} · ${run.edition}` : "starting…"}
+                label={run ? `${run.status.replace("_", " ")} · ${run.edition}` : t.dashboard.starting}
               />
-              <div className="mt-4 flex-1 min-h-[118px] rounded-xl bg-[rgba(4,7,15,0.6)] border border-[rgba(0,229,255,0.12)] p-3.5 font-mono text-[0.72rem] leading-relaxed overflow-y-auto">
+              <div className="mt-4 flex-1 min-h-[118px] rounded-xl bg-[var(--color-inset)] border border-[rgba(0,229,255,0.12)] p-3.5 font-mono text-[0.72rem] leading-relaxed overflow-y-auto">
                 {logLines.map((l, i) => (
                   <p key={i} className="log-line text-[var(--color-muted)]">
                     <span className="text-[var(--color-neon)]">›</span> {l}
@@ -145,23 +147,23 @@ export default function Dashboard() {
                 ))}
                 {busy && (
                   <p className="log-line text-[var(--color-neon)] flex items-center gap-2 mt-1">
-                    <span className="spinner-ring-light" /> working…
+                    <span className="spinner-ring-light" /> {t.dashboard.working}
                   </p>
                 )}
               </div>
               <div className="flex gap-5 mt-4 text-xs font-mono text-[var(--color-muted)]">
-                <span>found <b className="text-[var(--color-ink)]">{run?.stats.candidatesFound ?? 0}</b></span>
-                <span>net-new <b className="text-[var(--color-mint)]">{run?.stats.netNew ?? 0}</b></span>
-                <span>drafts <b className="text-[var(--color-neon)]">{run?.stats.draftsReady ?? 0}</b></span>
+                <span>{t.dashboard.statFound} <b className="text-[var(--color-ink)]">{run?.stats.candidatesFound ?? 0}</b></span>
+                <span>{t.dashboard.statNetNew} <b className="text-[var(--color-mint)]">{run?.stats.netNew ?? 0}</b></span>
+                <span>{t.dashboard.statDrafts} <b className="text-[var(--color-neon)]">{run?.stats.draftsReady ?? 0}</b></span>
               </div>
               {run?.status === "in_review" && (
                 <Link href="/review" className="btn-glow w-full mt-5 rise-in">
-                  Open the review queue →
+                  {t.dashboard.openReview}
                 </Link>
               )}
               {run && run.status !== "in_review" && (
                 <button className="btn-glow w-full mt-5" disabled>
-                  <span className="spinner-ring" /> {run.status === "queued" ? "Queued…" : run.status === "running" ? "Discovering…" : "Drafting…"}
+                  <span className="spinner-ring" /> {run.status === "queued" ? t.dashboard.queued : run.status === "running" ? t.dashboard.discovering : t.dashboard.drafting}
                 </button>
               )}
             </div>
@@ -169,7 +171,7 @@ export default function Dashboard() {
 
           {!run && !running && (
             <p className="text-xs text-[var(--color-faint)] mt-4 font-mono">
-              ~10s in mock mode · idempotent per week (cache key = week)
+              {t.dashboard.mockNote}
             </p>
           )}
         </div>
@@ -187,22 +189,22 @@ export default function Dashboard() {
       {/* provider health strip */}
       <div className="card p-6 mb-6 rise-in" style={{ animationDelay: "0.2s" }}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <SectionLabel>Provider health · fallback chain</SectionLabel>
+          <SectionLabel>{t.dashboard.providerHealth}</SectionLabel>
           <Link href="/settings" className="text-xs text-[var(--color-neon)] hover:underline">
-            manage chain →
+            {t.dashboard.manageChain}
           </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {chain.length === 0
             ? [0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[rgba(4,7,15,0.5)] p-4" aria-hidden="true">
+                <div key={i} className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[var(--color-inset)] p-4" aria-hidden="true">
                   <div className="shimmer h-3 w-1/2 rounded mb-3" />
                   <div className="shimmer h-4 w-3/4 rounded mb-2" />
                   <div className="shimmer h-3 w-2/3 rounded" />
                 </div>
               ))
             : chain.map((p, i) => (
-            <div key={p.name} className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[rgba(4,7,15,0.5)] p-4">
+            <div key={p.name} className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[var(--color-inset)] p-4">
               <div className="flex items-center gap-2 mb-1.5">
                 <StatusDot status={p.status} />
                 <span className="text-[0.66rem] font-mono text-[var(--color-faint)]">#{i + 1}</span>
@@ -220,21 +222,21 @@ export default function Dashboard() {
               </p>
             </div>
           ))}
-          <div className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[rgba(4,7,15,0.5)] p-4">
+          <div className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[var(--color-inset)] p-4">
             <div className="flex items-center gap-2 mb-1.5">
               <StatusDot status="active" />
             </div>
-            <p className="font-bold text-sm">cache</p>
-            <p className="text-[0.7rem] text-[var(--color-muted)] font-mono">week-keyed</p>
+            <p className="font-bold text-sm">{t.dashboard.cache}</p>
+            <p className="text-[0.7rem] text-[var(--color-muted)] font-mono">{t.dashboard.weekKeyed}</p>
             <p className="text-[0.7rem] mt-1.5 font-mono text-[var(--color-neon)]">
-              {cacheHit === null ? "…" : `${Math.round(cacheHit * 100)}% hit-rate`}
+              {cacheHit === null ? "…" : t.dashboard.hitRate(Math.round(cacheHit * 100))}
             </p>
           </div>
         </div>
         {active && (
           <p className="text-xs text-[var(--color-muted)] mt-4">
-            Serving via <b className="text-[var(--color-mint)]">{active.name}</b>
-            <span className="font-mono"> ({active.model})</span> — chain falls through automatically if it goes down. Lifetime-workable by design.
+            {t.dashboard.servingVia} <b className="text-[var(--color-mint)]">{active.name}</b>
+            <span className="font-mono"> ({active.model})</span> {t.dashboard.chainNote}
           </p>
         )}
       </div>
@@ -242,23 +244,23 @@ export default function Dashboard() {
       {/* usage meter */}
       <div className="card p-6 rise-in" style={{ animationDelay: "0.24s" }}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <SectionLabel>Monthly usage · {usage?.month ?? "…"}</SectionLabel>
-          <span className="chip chip-new">runway: {usage?.projectedRunway ?? "…"}</span>
+          <SectionLabel>{t.dashboard.monthlyUsage(usage?.month ?? "…")}</SectionLabel>
+          <span className="chip chip-new">{t.dashboard.runway(usage?.projectedRunway ?? "…")}</span>
         </div>
         {usage ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Meter label="Tokens in" used={usage.tokensIn} total={200_000} display={compactNum(usage.tokensIn)} />
-            <Meter label="Tokens out" used={usage.tokensOut} total={80_000} display={compactNum(usage.tokensOut)} />
+            <Meter label={t.dashboard.tokensIn} used={usage.tokensIn} total={200_000} display={compactNum(usage.tokensIn)} />
+            <Meter label={t.dashboard.tokensOut} used={usage.tokensOut} total={80_000} display={compactNum(usage.tokensOut)} />
             <Meter
-              label="Tavily credits"
+              label={t.dashboard.tavilyCredits}
               used={usage.tavilyCreditsUsed}
               total={usage.tavilyCreditsFree}
               display={`${usage.tavilyCreditsUsed} / ${usage.tavilyCreditsFree} free`}
             />
-            <div className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[rgba(4,7,15,0.5)] p-4 flex flex-col justify-center">
-              <p className="eyebrow !text-[0.62rem] !tracking-[3px] mb-1">Spend this month</p>
+            <div className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[var(--color-inset)] p-4 flex flex-col justify-center">
+              <p className="eyebrow !text-[0.62rem] !tracking-[3px] mb-1">{t.dashboard.spendMonth}</p>
               <p className="font-display text-3xl font-bold glow-text">{usd(usage.costUsd)}</p>
-              <p className="text-xs text-[var(--color-muted)] mt-1">≈ one weekly run · honest numbers</p>
+              <p className="text-xs text-[var(--color-muted)] mt-1">{t.dashboard.honest}</p>
             </div>
           </div>
         ) : (
