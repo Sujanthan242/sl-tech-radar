@@ -37,7 +37,7 @@ export function Stat({ label, value, hint, accent }: {
   return (
     <div className="card card-hover p-5 min-w-0">
       <p className="eyebrow !text-[0.62rem] !tracking-[3px] mb-2">{label}</p>
-      <p className={`font-display text-[2rem] font-bold leading-none break-words ${accent ? "glow-text" : ""}`}>
+      <p className={`font-display text-[1.65rem] md:text-[2rem] font-bold leading-none ${accent ? "glow-text" : ""}`}>
         {value}
       </p>
       {hint && <p className="text-xs text-[var(--color-muted)] mt-2">{hint}</p>}
