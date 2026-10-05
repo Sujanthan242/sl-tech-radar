@@ -20,6 +20,7 @@ import type { Candidate } from "@/lib/types";
 import { getCandidates } from "@/lib/api";
 import { mockCandidates } from "@/lib/mock";
 import { countdownLabel, daysUntil, prettyDate } from "@/lib/format";
+import { useLite } from "@/lib/prefs";
 import { KIND_LABELS, kindColor } from "./radarKinds";
 
 const RadarScene = dynamic(() => import("./RadarScene"), {
@@ -83,9 +84,70 @@ function RadarFallback({ data }: { data: Candidate[] }) {
   );
 }
 
+/* ---------------- shared overlays (3D + lite hero) ---------------- */
+
+function HeroHeader({ data, urgent, kindsPresent }: {
+  data: Candidate[] | null;
+  urgent: number;
+  kindsPresent: string[];
+}) {
+  return (
+    <div className="absolute top-0 left-0 right-0 flex flex-wrap items-start justify-between gap-2 p-4 pointer-events-none">
+      <div>
+        <p className="eyebrow !text-[0.62rem] !tracking-[3px]">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-mint)] shadow-[0_0_8px_rgba(61,220,151,0.9)] mr-2 align-middle" />
+          Live radar
+        </p>
+        <p className="text-xs text-[var(--color-muted)] mt-1 font-mono">
+          {data ? (
+            <>
+              <b className="text-[var(--color-ink)]">{data.length}</b> opportunities
+              {urgent > 0 && (
+                <>
+                  {" · "}<b className="text-[var(--color-rose)]">{urgent} closing ≤ 7d</b>
+                </>
+              )}
+            </>
+          ) : (
+            "scanning…"
+          )}
+        </p>
+      </div>
+      {/* legend: color = kind */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 justify-end max-w-full sm:max-w-[55%]" aria-label="Legend: node color by category">
+        {kindsPresent.map((k) => (
+          <span key={k} className="inline-flex items-center gap-1.5 text-[0.66rem] font-mono text-[var(--color-muted)]">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: kindColor(k), boxShadow: `0 0 8px ${kindColor(k)}` }}
+            />
+            {KIND_LABELS[k] ?? k}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroFooter({ lite }: { lite: boolean }) {
+  return (
+    <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
+      <p className="text-center text-[0.66rem] font-mono text-[var(--color-faint)]">
+        {lite
+          ? "◉ static radar · lite mode — tap to open discover"
+          : "◉ pulsing = closing ≤ 7 days · inner rings = urgent · hover/tap a node · click → discover"}
+      </p>
+    </div>
+  );
+}
+
+const HERO_BOX =
+  "relative w-full h-[340px] md:h-[400px] rounded-[18px] overflow-hidden border border-[rgba(0,229,255,0.25)] bg-[radial-gradient(ellipse_at_center,rgba(0,229,255,0.06),transparent_70%),var(--color-panel)]";
+
 /* ---------------- main component ---------------- */
 
 export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHero3DProps) {
+  const { lite } = useLite();
   const [fetched, setFetched] = useState<Candidate[] | null>(null);
   const [inView, setInView] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(
@@ -133,13 +195,34 @@ export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHer
 
   const animated = !reducedMotion;
   const kindsPresent = [...new Set((data ?? []).map((c) => c.kind))];
+  const ariaLabel = `3D radar — ${data?.length ?? 0} opportunities plotted by category and deadline urgency${urgent > 0 ? `, ${urgent} closing within 7 days` : ""}`;
+
+  /* lite mode: static gradient hero, no WebGL — three.js never loads */
+  if (lite) {
+    return (
+      <div
+        className={`${HERO_BOX} cursor-pointer`}
+        role="region"
+        aria-label={`${ariaLabel} (lite mode — static)`}
+        onClick={() => onNodeClick?.("lite")}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") onNodeClick?.("lite");
+        }}
+        tabIndex={0}
+      >
+        <RadarFallback data={data ?? []} />
+        <HeroHeader data={data} urgent={urgent} kindsPresent={kindsPresent} />
+        <HeroFooter lite />
+      </div>
+    );
+  }
 
   return (
     <div
       ref={boxRef}
-      className="relative w-full h-[340px] md:h-[400px] rounded-[18px] overflow-hidden border border-[rgba(0,229,255,0.25)] bg-[radial-gradient(ellipse_at_center,rgba(0,229,255,0.06),transparent_70%),var(--color-panel)]"
+      className={HERO_BOX}
       role="region"
-      aria-label={`3D radar — ${data?.length ?? 0} opportunities plotted by category and deadline urgency${urgent > 0 ? `, ${urgent} closing within 7 days` : ""}`}
+      aria-label={ariaLabel}
     >
       {/* 3D scene */}
       {data ? (
@@ -156,41 +239,7 @@ export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHer
         <div className="absolute inset-0 shimmer" aria-hidden="true" />
       )}
 
-      {/* header overlay */}
-      <div className="absolute top-0 left-0 right-0 flex flex-wrap items-start justify-between gap-2 p-4 pointer-events-none">
-        <div>
-          <p className="eyebrow !text-[0.62rem] !tracking-[3px]">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-mint)] shadow-[0_0_8px_rgba(61,220,151,0.9)] mr-2 align-middle" />
-            Live radar
-          </p>
-          <p className="text-xs text-[var(--color-muted)] mt-1 font-mono">
-            {data ? (
-              <>
-                <b className="text-[var(--color-ink)]">{data.length}</b> opportunities
-                {urgent > 0 && (
-                  <>
-                    {" · "}<b className="text-[var(--color-rose)]">{urgent} closing ≤ 7d</b>
-                  </>
-                )}
-              </>
-            ) : (
-              "scanning…"
-            )}
-          </p>
-        </div>
-        {/* legend: color = kind */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-end max-w-[55%]" aria-label="Legend: node color by category">
-          {kindsPresent.map((k) => (
-            <span key={k} className="inline-flex items-center gap-1.5 text-[0.66rem] font-mono text-[var(--color-muted)]">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ background: kindColor(k), boxShadow: `0 0 8px ${kindColor(k)}` }}
-              />
-              {KIND_LABELS[k] ?? k}
-            </span>
-          ))}
-        </div>
-      </div>
+      <HeroHeader data={data} urgent={urgent} kindsPresent={kindsPresent} />
 
       {/* hover tooltip — title + deadline + source */}
       {hovered && (
@@ -202,7 +251,7 @@ export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHer
             />
             <span style={{ color: kindColor(hovered.kind) }}>{KIND_LABELS[hovered.kind] ?? hovered.kind}</span>
           </p>
-          <p className="text-sm font-bold leading-snug mb-1.5">{hovered.title}</p>
+          <p className="text-sm font-bold leading-snug mb-1.5 break-words">{hovered.title}</p>
           <p className="text-xs text-[var(--color-muted)] font-mono">
             ⏳ {hovered.deadline ? `${prettyDate(hovered.deadline)} · ${countdownLabel(hovered.deadline)}` : "date TBC"}
           </p>
@@ -212,12 +261,7 @@ export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHer
         </div>
       )}
 
-      {/* footer caption — how to read the radar */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
-        <p className="text-center text-[0.66rem] font-mono text-[var(--color-faint)]">
-          ◉ pulsing = closing ≤ 7 days · inner rings = urgent · hover/tap a node · click → discover
-        </p>
-      </div>
+      <HeroFooter lite={false} />
     </div>
   );
 }

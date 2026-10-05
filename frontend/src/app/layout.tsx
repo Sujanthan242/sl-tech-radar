@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
+import { ThemeProvider, LiteProvider } from "@/lib/prefs";
+import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,23 +27,26 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
+      <head>
+        {/* pre-paint: apply the stored/OS theme before first render — no flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('slr-theme');var t=s||(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');if(t==='dark')document.documentElement.classList.add('dark');try{if(localStorage.getItem('slr-lite')==='1')document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('lite')});}catch(e){}}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col" style={{ fontFamily: "var(--font-sans)" }}>
-        <Nav />
-        <main className="flex-1 w-full max-w-[1280px] mx-auto px-5 md:px-8 pt-24 pb-16">
-          {children}
-        </main>
-        <footer className="border-t border-[rgba(0,229,255,0.12)] bg-[var(--color-abyss)]">
-          <div className="max-w-[1280px] mx-auto px-5 md:px-8 py-6 flex items-center justify-between">
-            <p className="text-sm text-[var(--color-muted)]">
-              <span className="font-display font-bold text-[var(--color-ink)]">
-                SL Tech <span className="glow-text">Radar</span>
-              </span>
-              <span className="mx-2 text-[var(--color-faint)]">·</span>
-              Never miss a deadline that matters.
-            </p>
-            <p className="text-xs text-[var(--color-faint)]">v1 · ops console</p>
-          </div>
-        </footer>
+        <ThemeProvider>
+          <LiteProvider>
+            <LanguageProvider>
+              <Nav />
+              <main className="flex-1 w-full max-w-[1280px] mx-auto px-5 md:px-8 pt-24 pb-16">
+                {children}
+              </main>
+              <Footer />
+            </LanguageProvider>
+          </LiteProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

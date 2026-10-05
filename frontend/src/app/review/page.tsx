@@ -17,13 +17,17 @@ import { mockCandidates } from "@/lib/mock";
 import type { DeadlineConfidence, DraftSection, DraftStatus, RejectReason } from "@/lib/types";
 import { CATEGORIES, REJECT_REASONS } from "@/lib/types";
 import { compactNum, prettyDateTime } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import type { Dict } from "@/lib/i18n";
 
-const STATUS_META: Record<DraftStatus, { label: string; cls: string }> = {
-  draft: { label: "◌ draft", cls: "chip-seen" },
-  approved: { label: "✓ approved", cls: "chip-new" },
-  edited: { label: "✎ edited", cls: "chip-deadline" },
-  rejected: { label: "✕ rejected", cls: "chip-deadline-urgent" },
-};
+function statusMeta(t: Dict): Record<DraftStatus, { label: string; cls: string }> {
+  return {
+    draft: { label: t.review.statusDraft, cls: "chip-seen" },
+    approved: { label: t.review.statusApproved, cls: "chip-new" },
+    edited: { label: t.review.statusEdited, cls: "chip-deadline" },
+    rejected: { label: t.review.statusRejected, cls: "chip-deadline-urgent" },
+  };
+}
 
 /** Worst deadline-confidence among this category's fresh candidates. */
 function categoryConfidence(cat: DraftSection["category"]): DeadlineConfidence {
@@ -44,17 +48,9 @@ function sortByDeadline(drafts: DraftSection[]): DraftSection[] {
   });
 }
 
-const SHORTCUTS: { keys: string; action: string }[] = [
-  { keys: "j / k", action: "Move to next / previous section" },
-  { keys: "a", action: "Approve selected section" },
-  { keys: "e", action: "Edit selected section inline" },
-  { keys: "r", action: "Reject selected section (with reason)" },
-  { keys: "g", action: "Regenerate selected section" },
-  { keys: "?", action: "Show this overlay" },
-  { keys: "esc", action: "Close dialog / cancel edit" },
-];
-
 export default function Review() {
+  const { t } = useI18n();
+  const STATUS_META = statusMeta(t);
   const [drafts, setDrafts] = useState<DraftSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState(0);
@@ -93,8 +89,8 @@ export default function Review() {
     if (d.status === "approved") return;
     await approveDraft(d.id);
     setDrafts((prev) => prev.map((x) => (x.id === d.id ? { ...x, status: "approved" as const } : x)));
-    setToast(`Approved — ${CATEGORIES.find((c) => c.id === d.category)?.label}`);
-  }, []);
+    setToast(t.review.toastApproved(t.categories[d.category] ?? CATEGORIES.find((c) => c.id === d.category)?.label ?? d.category));
+  }, [t]);
 
   const startEdit = useCallback((d: DraftSection) => {
     setEditingId(d.id);
@@ -105,8 +101,8 @@ export default function Review() {
     const updated = await updateDraft(d.id, editText);
     setDrafts((prev) => prev.map((x) => (x.id === d.id ? updated : x)));
     setEditingId(null);
-    setToast("Edit saved — marked as human-edited ✎");
-  }, [editText]);
+    setToast(t.review.toastEditSaved);
+  }, [editText, t]);
 
   const openReject = useCallback((d: DraftSection) => {
     setReason("deadline passed");
@@ -131,8 +127,8 @@ export default function Review() {
       ),
     );
     setRejectTarget(null);
-    setToast(`Rejected — feeds the ledger + prompt dataset`);
-  }, [rejectTarget, reason, note]);
+    setToast(t.review.toastRejected);
+  }, [rejectTarget, reason, note, t]);
 
   const confirmRegen = useCallback(async () => {
     if (!regenTarget) return;
@@ -141,8 +137,8 @@ export default function Review() {
     setDrafts((prev) => sortByDeadline(prev.map((x) => (x.id === regenTarget.id ? fresh : x))));
     setRegenBusy(false);
     setRegenTarget(null);
-    setToast("Regenerated — previous version kept for diff");
-  }, [regenTarget, feedback]);
+    setToast(t.review.toastRegen);
+  }, [regenTarget, feedback, t]);
 
   /* keyboard-first review — never hijacks keystrokes while typing */
   useEffect(() => {
@@ -201,9 +197,9 @@ export default function Review() {
       document.body.removeChild(ta);
     }
     setCopied(true);
-    setToast("Markdown copied — paste straight into Substack");
+    setToast(t.review.toastCopied);
     setTimeout(() => setCopied(false), 2500);
-  }, [exportMd]);
+  }, [exportMd, t]);
 
   const readyCount = useMemo(() => drafts.filter((d) => d.status === "approved" || d.status === "edited").length, [drafts]);
 
@@ -224,16 +220,16 @@ export default function Review() {
   return (
     <>
       <PageHeader
-        eyebrow={`Review queue · edition ${MOCK_EDITION}`}
-        title={<>Approve in <span className="glow-text">15 minutes</span></>}
-        sub="Every draft ships with its sources attached — a contextless approve button is not a safety measure. j/k to move, ? for shortcuts."
+        eyebrow={t.review.eyebrow(MOCK_EDITION)}
+        title={<>{t.review.titleA} <span className="glow-text">{t.review.titleB}</span></>}
+        sub={t.review.sub}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className="btn-ghost" onClick={() => setShowKeys(true)}>
-              <span className="kbd">?</span> shortcuts
+              <span className="kbd">?</span> {t.review.shortcutsBtn}
             </button>
             <button className="btn-glow !py-2.5 !px-6 !text-sm" onClick={openExport} disabled={readyCount === 0}>
-              ⬆ Export for Substack
+              {t.review.exportBtn}
             </button>
           </div>
         }
@@ -243,11 +239,11 @@ export default function Review() {
       <div className="card p-5 mb-6 rise-in">
         <ProgressBar
           value={(done / Math.max(1, drafts.length)) * 100}
-          label={`${done} of ${drafts.length} sections approved`}
+          label={t.review.progress(done, drafts.length)}
         />
         {allDone && (
           <p className="text-sm text-[var(--color-mint)] mt-3 rise-in">
-            ✓ All sections cleared — export is ready when you are.
+            {t.review.allCleared}
           </p>
         )}
       </div>
@@ -256,8 +252,8 @@ export default function Review() {
       {drafts.length === 0 ? (
         <Empty
           icon="📭"
-          title="No drafts yet"
-          hint="Run the Saturday pipeline from the dashboard — sections land here with their sources attached."
+          title={t.review.emptyTitle}
+          hint={t.review.emptyHint}
         />
       ) : (
       <div className="grid gap-6">
@@ -281,7 +277,7 @@ export default function Review() {
               {/* header */}
               <div className="flex flex-wrap items-center gap-2.5 px-6 pt-5 pb-4 border-b border-[rgba(0,229,255,0.12)]">
                 <span className="text-xl">{cat?.icon}</span>
-                <h2 className="font-display text-lg font-bold capitalize">{d.category}</h2>
+                <h2 className="font-display text-lg font-bold capitalize">{t.categories[d.category] ?? d.category}</h2>
                 <span className={`chip ${meta.cls} !text-[0.78rem] !px-4 !py-[7px]`}>{meta.label}</span>
                 <DeadlineChip deadline={d.nextDeadline} />
                 <ConfidenceBadge level={categoryConfidence(d.category)} />
@@ -295,7 +291,7 @@ export default function Review() {
                 <div className="p-6">
                   {d.status === "rejected" && d.rejectionReason && (
                     <div className="rounded-xl border border-[rgba(255,107,129,0.4)] bg-[rgba(255,107,129,0.06)] px-4 py-3 mb-4 text-sm">
-                      <span className="text-[var(--color-rose)] font-semibold">Rejected:</span>{" "}
+                      <span className="text-[var(--color-rose)] font-semibold">{t.review.rejectedLabel}</span>{" "}
                       <span className="text-[var(--color-muted)]">{d.rejectionReason}</span>
                     </div>
                   )}
@@ -310,14 +306,14 @@ export default function Review() {
                       />
                       <div className="flex gap-2 mt-3">
                         <button className="btn-glow !py-2.5 !px-6 !text-sm" onClick={() => void saveEdit(d)}>
-                          ✓ Save edit
+                          {t.review.saveEdit}
                         </button>
                         <button className="btn-ghost" onClick={() => setEditingId(null)}>
-                          Cancel
+                          {t.review.cancel}
                         </button>
                       </div>
                       <p className="text-xs text-[var(--color-faint)] mt-2">
-                        Edits are captured verbatim for prompt improvement (LangSmith dataset).
+                        {t.review.editCaptured}
                       </p>
                     </div>
                   ) : (
@@ -333,29 +329,29 @@ export default function Review() {
                         className="btn-ghost !border-[rgba(61,220,151,0.5)] !text-[var(--color-mint)]"
                         onClick={() => void doApprove(d)}
                         disabled={d.status === "approved"}
-                        title="Approve (a)"
+                        title={t.review.approveKey}
                       >
-                        ✓ Approve <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">a</span>
+                        {t.review.approve} <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">a</span>
                       </button>
-                      <button className="btn-ghost" onClick={() => startEdit(d)} title="Edit inline (e)">
-                        ✎ Edit <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">e</span>
+                      <button className="btn-ghost" onClick={() => startEdit(d)} title={t.review.editKey}>
+                        {t.review.editBtn} <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">e</span>
                       </button>
-                      <button className="btn-danger" onClick={() => openReject(d)} title="Reject with reason (r)">
-                        ✕ Reject <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">r</span>
+                      <button className="btn-danger" onClick={() => openReject(d)} title={t.review.rejectKey}>
+                        {t.review.rejectBtn} <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">r</span>
                       </button>
-                      <button className="btn-ghost" onClick={() => setRegenTarget(d)} title="Regenerate (g)">
-                        ⟳ Regenerate <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">g</span>
+                      <button className="btn-ghost" onClick={() => setRegenTarget(d)} title={t.review.regenKey}>
+                        {t.review.regenerate} <span className="kbd !min-w-[20px] !h-[20px] !text-[0.66rem]">g</span>
                       </button>
                       <span className="text-[0.7rem] text-[var(--color-faint)] ml-auto self-center">
-                        updated {prettyDateTime(d.updatedAt)}
+                        {t.review.updated} {prettyDateTime(d.updatedAt)}
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* sources side panel — always visible, approve is never contextless */}
-                <aside className="border-t lg:border-t-0 lg:border-l border-[rgba(0,229,255,0.12)] bg-[rgba(4,7,15,0.55)] p-6">
-                  <SectionLabel>🔗 Sources · linked to this draft</SectionLabel>
+                <aside className="border-t lg:border-t-0 lg:border-l border-[rgba(0,229,255,0.12)] bg-[var(--color-inset)] p-6">
+                  <SectionLabel>{t.review.sourcesTitle}</SectionLabel>
                   <div className="grid gap-3">
                     {d.sources.map((s, si) => (
                       <a
@@ -363,7 +359,7 @@ export default function Review() {
                         href={s.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="group rounded-xl border border-[rgba(0,229,255,0.16)] bg-[rgba(10,16,35,0.6)] p-3.5 hover:border-[var(--color-neon)] hover:shadow-[0_0_16px_rgba(0,229,255,0.25)] transition-all"
+                        className="group rounded-xl border border-[rgba(0,229,255,0.16)] bg-[var(--color-inset)] p-3.5 hover:border-[var(--color-neon)] hover:shadow-[0_0_16px_rgba(0,229,255,0.25)] transition-all"
                       >
                         <p className="text-sm font-semibold leading-snug mb-1.5">
                           <span className="text-[var(--color-neon)] font-mono mr-1.5">[{si + 1}]</span>
@@ -376,11 +372,11 @@ export default function Review() {
                     ))}
                   </div>
                   <p className="text-[0.7rem] text-[var(--color-faint)] mt-4 leading-relaxed">
-                    Each <span className="font-mono text-[var(--color-neon)]">[n]</span> citation in the draft
-                    maps to the source with the same number here.
+                    {t.review.citeNoteA} <span className="font-mono text-[var(--color-neon)]">[n]</span>{" "}
+                    {t.review.citeNoteB}
                   </p>
                   <div className="mt-4 pt-4 border-t border-[rgba(0,229,255,0.1)] text-[0.72rem] text-[var(--color-faint)] font-mono leading-relaxed">
-                    drafted {prettyDateTime(d.createdAt)}
+                    {t.review.drafted} {prettyDateTime(d.createdAt)}
                     <br />
                     id {d.id.slice(0, 12)}…
                   </div>
@@ -395,9 +391,9 @@ export default function Review() {
       {/* reject modal */}
       {rejectTarget && (
         <div className="modal-backdrop" onClick={() => setRejectTarget(null)}>
-          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label="Reject section" onClick={(e) => e.stopPropagation()}>
-            <p className="eyebrow mb-2">Reject section</p>
-            <h3 className="font-display text-xl font-bold mb-4 capitalize">{rejectTarget.category}</h3>
+          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label={t.review.rejectDialogTitle} onClick={(e) => e.stopPropagation()}>
+            <p className="eyebrow mb-2">{t.review.rejectDialogTitle}</p>
+            <h3 className="font-display text-xl font-bold mb-4 capitalize">{t.categories[rejectTarget.category] ?? rejectTarget.category}</h3>
             <div className="grid gap-2 mb-4">
               {REJECT_REASONS.map((r) => (
                 <button
@@ -409,20 +405,20 @@ export default function Review() {
                       : "border-[rgba(0,229,255,0.16)] text-[var(--color-muted)] hover:border-[rgba(0,229,255,0.4)]"
                   }`}
                 >
-                  {r}
+                  {t.rejectReasons[r] ?? r}
                 </button>
               ))}
             </div>
             <textarea
               className="field mb-4"
               rows={2}
-              placeholder="optional note — feeds the prompt-tuning dataset…"
+              placeholder={t.review.rejectNotePh}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
             <div className="flex gap-2 justify-end">
-              <button className="btn-ghost" onClick={() => setRejectTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={() => void confirmReject()}>✕ Confirm reject</button>
+              <button className="btn-ghost" onClick={() => setRejectTarget(null)}>{t.review.cancel}</button>
+              <button className="btn-danger" onClick={() => void confirmReject()}>{t.review.confirmReject}</button>
             </div>
           </div>
         </div>
@@ -431,11 +427,11 @@ export default function Review() {
       {/* regenerate modal */}
       {regenTarget && (
         <div className="modal-backdrop" onClick={() => !regenBusy && setRegenTarget(null)}>
-          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label="Regenerate section" onClick={(e) => e.stopPropagation()}>
-            <p className="eyebrow mb-2">Regenerate section</p>
-            <h3 className="font-display text-xl font-bold mb-4 capitalize">{regenTarget.category}</h3>
+          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label={t.review.regenDialogTitle} onClick={(e) => e.stopPropagation()}>
+            <p className="eyebrow mb-2">{t.review.regenDialogTitle}</p>
+            <h3 className="font-display text-xl font-bold mb-4 capitalize">{t.categories[regenTarget.category] ?? regenTarget.category}</h3>
             <p className="text-sm text-[var(--color-muted)] mb-3">
-              Your feedback is injected into the regeneration prompt. The old version is kept for diff.
+              {t.review.regenDesc}
             </p>
             <textarea
               className="field mb-4"
@@ -445,12 +441,12 @@ export default function Review() {
               disabled={regenBusy}
             />
             <div className="flex gap-2 justify-end">
-              <button className="btn-ghost" onClick={() => setRegenTarget(null)} disabled={regenBusy}>Cancel</button>
+              <button className="btn-ghost" onClick={() => setRegenTarget(null)} disabled={regenBusy}>{t.review.cancel}</button>
               <button className="btn-glow !py-2.5 !px-6 !text-sm" onClick={() => void confirmRegen()} disabled={regenBusy}>
                 {regenBusy ? (
-                  <><span className="spinner-ring" /> Regenerating…</>
+                  <><span className="spinner-ring" /> {t.review.regenerating}</>
                 ) : (
-                  "⟳ Regenerate"
+                  t.review.regenerate
                 )}
               </button>
             </div>
@@ -465,32 +461,32 @@ export default function Review() {
             className="card p-6 rise-in"
             role="dialog"
             aria-modal="true"
-            aria-label="Substack export"
+            aria-label={t.review.exportDialogTitle}
             style={{ width: "min(760px, 100%)", maxHeight: "88vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="eyebrow mb-1">Substack export</p>
-                <h3 className="font-display text-xl font-bold">SL Tech Students Weekly — {MOCK_EDITION}</h3>
+                <p className="eyebrow mb-1">{t.review.exportDialogTitle}</p>
+                <h3 className="font-display text-xl font-bold">{t.review.exportHeading(MOCK_EDITION)}</h3>
               </div>
               <button
                 className="btn-glow !py-2.5 !px-6 !text-sm"
                 onClick={() => void copyExport()}
                 disabled={exportBusy || !exportMd}
               >
-                {copied ? "✓ Copied" : "⧉ Copy markdown"}
+                {copied ? t.review.copiedBtn : t.review.copyMd}
               </button>
             </div>
             {exportBusy ? (
               <div className="shimmer h-64 rounded-xl" />
             ) : (
-              <pre className="rounded-xl border border-[rgba(0,229,255,0.16)] bg-[rgba(4,7,15,0.7)] p-5 text-[0.78rem] font-mono leading-relaxed text-[var(--color-muted)] whitespace-pre-wrap max-h-[52vh] overflow-y-auto">
+              <pre className="rounded-xl border border-[rgba(0,229,255,0.16)] bg-[var(--color-inset)] p-5 text-[0.78rem] font-mono leading-relaxed text-[var(--color-muted)] whitespace-pre-wrap [overflow-wrap:anywhere] max-h-[52vh] overflow-y-auto">
                 {exportMd}
               </pre>
             )}
             <p className="text-xs text-[var(--color-faint)] mt-3">
-              {readyCount} approved sections · {exportMd.length.toLocaleString()} chars · paste into the Substack editor
+              {t.review.exportMeta(readyCount, exportMd.length.toLocaleString())}
             </p>
           </div>
         </div>
@@ -499,10 +495,10 @@ export default function Review() {
       {/* shortcut overlay */}
       {showKeys && (
         <div className="modal-backdrop" onClick={() => setShowKeys(false)}>
-          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
-            <p className="eyebrow mb-4">Keyboard shortcuts</p>
+          <div className="modal-panel card p-6" role="dialog" aria-modal="true" aria-label={t.review.keysTitle} onClick={(e) => e.stopPropagation()}>
+            <p className="eyebrow mb-4">{t.review.keysTitle}</p>
             <div className="grid gap-3">
-              {SHORTCUTS.map((s) => (
+              {t.review.shortcuts.map((s) => (
                 <div key={s.keys} className="flex items-center gap-4">
                   <span className="kbd shrink-0">{s.keys}</span>
                   <span className="text-sm text-[var(--color-muted)]">{s.action}</span>
@@ -510,7 +506,7 @@ export default function Review() {
               ))}
             </div>
             <button className="btn-ghost w-full mt-6" onClick={() => setShowKeys(false)}>
-              Back to the queue
+              {t.review.backToQueue}
             </button>
           </div>
         </div>

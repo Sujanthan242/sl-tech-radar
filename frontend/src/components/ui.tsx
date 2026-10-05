@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 import type { DedupStatus } from "@/lib/types";
 import { countdownLabel, isUrgent, prettyDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 /* ---------- page header ---------- */
 export function PageHeader({ eyebrow, title, sub, action }: {
@@ -34,9 +35,9 @@ export function Stat({ label, value, hint, accent }: {
   accent?: boolean;
 }) {
   return (
-    <div className="card card-hover p-5">
+    <div className="card card-hover p-5 min-w-0">
       <p className="eyebrow !text-[0.62rem] !tracking-[3px] mb-2">{label}</p>
-      <p className={`font-display text-[2rem] font-bold leading-none ${accent ? "glow-text" : ""}`}>
+      <p className={`font-display text-[2rem] font-bold leading-none break-words ${accent ? "glow-text" : ""}`}>
         {value}
       </p>
       {hint && <p className="text-xs text-[var(--color-muted)] mt-2">{hint}</p>}
@@ -46,9 +47,10 @@ export function Stat({ label, value, hint, accent }: {
 
 /* ---------- dedup badge ---------- */
 export function DedupBadge({ status }: { status: DedupStatus }) {
-  if (status === "NEW") return <span className="chip chip-new">🟢 new</span>;
-  if (status === "SEEN") return <span className="chip chip-seen">⚪ seen</span>;
-  return <span className="chip chip-verify">⚠️ verify</span>;
+  const { t } = useI18n();
+  if (status === "NEW") return <span className="chip chip-new">{t.badges.new}</span>;
+  if (status === "SEEN") return <span className="chip chip-seen">{t.badges.seen}</span>;
+  return <span className="chip chip-verify">{t.badges.verify}</span>;
 }
 
 /* ---------- deadline countdown chip ---------- */
@@ -56,10 +58,11 @@ export function DeadlineChip({ deadline, confidence }: {
   deadline: string | null;
   confidence?: "high" | "medium" | "low";
 }) {
+  const { t } = useI18n();
   if (!deadline) {
     return (
-      <span className="chip chip-seen" title="No deadline published">
-        📅 date TBC{confidence === "low" ? " · unverified" : ""}
+      <span className="chip chip-seen" title={t.badges.dateTbc}>
+        {t.badges.dateTbc}{confidence === "low" ? ` · ${t.badges.unverified}` : ""}
       </span>
     );
   }
@@ -76,14 +79,16 @@ export function DeadlineChip({ deadline, confidence }: {
 
 /* ---------- confidence badge ---------- */
 export function ConfidenceBadge({ level }: { level: "high" | "medium" | "low" }) {
+  const { t } = useI18n();
   const styles = {
     high: "text-[var(--color-mint)] border-[rgba(61,220,151,0.5)] bg-[rgba(61,220,151,0.07)]",
     medium: "text-[var(--color-neon)] border-[rgba(0,229,255,0.5)] bg-[rgba(0,229,255,0.06)]",
     low: "text-[var(--color-amber)] border-[rgba(255,180,84,0.55)] bg-[rgba(255,180,84,0.07)]",
   } as const;
+  const label = level === "high" ? t.badges.confHigh : level === "medium" ? t.badges.confMedium : t.badges.confLow;
   return (
-    <span className={`chip ${styles[level]}`} title="Deadline extraction confidence">
-      {level === "high" ? "✓" : level === "medium" ? "◐" : "⚠"} {level} confidence
+    <span className={`chip ${styles[level]}`} title={label}>
+      {label}
     </span>
   );
 }
@@ -172,8 +177,8 @@ export function Toast({ message, onDone, duration = 4500 }: {
       role="status"
       aria-live="polite"
     >
-      <span className="text-[var(--color-neon)] text-lg" aria-hidden="true">✦</span>
-      <span className="text-sm font-medium">{message}</span>
+      <span className="text-[var(--color-neon)] text-lg shrink-0" aria-hidden="true">✦</span>
+      <span className="text-sm font-medium break-words min-w-0">{message}</span>
     </div>
   );
 }
