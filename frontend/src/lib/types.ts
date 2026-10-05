@@ -93,7 +93,8 @@ export interface UsageInfo {
   tokensIn: number;
   tokensOut: number;
   tavilyCreditsUsed: number;
-  tavilyCreditsFree: number;
+  /** Absent from the /api/providers/status usage object — frontend falls back to 1000. */
+  tavilyCreditsFree?: number;
   costUsd: number;
   projectedRunway: string;
 }
