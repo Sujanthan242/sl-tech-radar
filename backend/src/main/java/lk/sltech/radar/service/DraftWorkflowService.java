@@ -4,6 +4,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import lk.sltech.radar.domain.*;
 import lk.sltech.radar.pipeline.DraftService;
+import lk.sltech.radar.ai.TemplateProvider;
+import lk.sltech.radar.ai.TemplateProvider;
 import lk.sltech.radar.repo.*;
 import lk.sltech.radar.tracing.TracingService;
 import lk.sltech.radar.web.dto.ApiDtos;
@@ -52,7 +54,8 @@ public class DraftWorkflowService {
                     .filter(c -> CATEGORY_KIND.get(cat) == c.getKind())
                     .filter(c -> c.getDedupStatus() != Enums.DedupStatus.SEEN)
                     .toList();
-            DraftSection d = draftService.generateDraft(edition, cat, items, null, null);
+DraftSection d = draftService.generateDraft(edition, cat, items, null, null);
+            if (d == null) continue; // no candidates — no placeholder draft saved
             out.add(new ApiDtos.DraftRef(d.getId(), d.getCategory().name(), d.getStatus().name()));
         }
         return out;
@@ -61,12 +64,23 @@ public class DraftWorkflowService {
     @Transactional(readOnly = true)
     public List<ApiDtos.DraftSectionDto> listByEdition(String week) {
         return drafts.findByEditionWeek(week).stream()
+                .filter(d -> !isPlaceholder(d))
                 .sorted(Comparator.comparing(d -> d.getCategory().name()))
                 .map(ApiDtos.DraftSectionDto::from)
                 .toList();
     }
 
     @Transactional
+/**
+     * Placeholder drafts (generated when the pipeline had zero candidates)
+     * are hidden from the review queue so it shows an honest empty state.
+     * The rows stay in the DB for audit purposes.
+     */
+    private boolean isPlaceholder(DraftSection d) {
+        String md = d.getContentMd();
+        return md != null && md.contains(TemplateProvider.EMPTY_MARKER);
+    }
+
     public ApiDtos.DraftSectionDto update(String id, String contentMd) {
         DraftSection d = get(id);
         d.setContentMd(contentMd);
@@ -107,6 +121,8 @@ public class DraftWorkflowService {
         // Feedback changes the content key -> brand-new draft; the old row is kept for diffing.
         DraftSection fresh = draftService.generateDraft(
                 old.getEdition(), old.getCategory(), items, feedback, null);
+        if (fresh == null)
+            throw new IllegalArgumentException("No candidates to regenerate from for " + old.getCategory());
         return ApiDtos.DraftSectionDto.from(fresh);
     }
 
