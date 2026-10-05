@@ -215,7 +215,9 @@ export default function Dashboard() {
               </p>
               <p className="text-[0.7rem] mt-1.5 font-mono">
                 {p.status === "active" ? (
-                  <span className="text-[var(--color-mint)]">✓ {p.latencyMs}ms</span>
+                  <span className="text-[var(--color-mint)]">
+                    ✓ {p.latencyMs != null ? `${p.latencyMs}ms` : "live"}
+                  </span>
                 ) : (
                   <span className="text-[var(--color-amber)]">standby</span>
                 )}
@@ -254,8 +256,8 @@ export default function Dashboard() {
             <Meter
               label={t.dashboard.tavilyCredits}
               used={usage.tavilyCreditsUsed}
-              total={usage.tavilyCreditsFree}
-              display={`${usage.tavilyCreditsUsed} / ${usage.tavilyCreditsFree} free`}
+              total={usage.tavilyCreditsFree ?? 1000}
+              display={`${usage.tavilyCreditsUsed} / ${usage.tavilyCreditsFree ?? 1000} free`}
             />
             <div className="rounded-xl border border-[rgba(0,229,255,0.14)] bg-[var(--color-inset)] p-4 flex flex-col justify-center">
               <p className="eyebrow !text-[0.62rem] !tracking-[3px] mb-1">{t.dashboard.spendMonth}</p>
