@@ -229,8 +229,14 @@ function NodeBlip({
         />
       </sprite>
       {/* core */}
+      <mesh ref={mesh}>
+        <sphereGeometry args={[0.13, 16, 12]} />
+        <meshBasicMaterial color={plot.color} toneMapped={false} />
+      </mesh>
+      {/* invisible fat hit-area: the visible core is <20px on screen and nearly
+          untappable on phones, so all pointer events live on this larger sphere */}
       <mesh
-        ref={mesh}
+        visible={false}
         onPointerOver={(e) => {
           e.stopPropagation();
           onHover(plot.c);
@@ -245,8 +251,8 @@ function NodeBlip({
           onSelect(plot.c.id);
         }}
       >
-        <sphereGeometry args={[0.13, 16, 12]} />
-        <meshBasicMaterial color={plot.color} toneMapped={false} />
+        <sphereGeometry args={[0.5, 8, 8]} />
+        <meshBasicMaterial />
       </mesh>
       {/* urgent nodes get a thin warning ring lying on the disc */}
       {plot.urgent && (
