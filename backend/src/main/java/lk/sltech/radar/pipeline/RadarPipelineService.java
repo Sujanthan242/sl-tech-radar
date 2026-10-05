@@ -155,7 +155,8 @@ public class RadarPipelineService {
             // ---- DRAFT (one structured call per category) ------------------
             int drafted = 0;
             List<Category> cats = new ArrayList<>(freshByCategory.keySet());
-            // Draft even empty categories in mock mode so the review queue is never bare.
+            // Empty categories are skipped by DraftService (no placeholder drafts);
+            // in mock mode we still attempt every category so seeded candidates draft.
             if (useMock) for (Category c : Category.values()) cats.add(c);
             cats = cats.stream().distinct().toList();
             for (int i = 0; i < cats.size(); i++) {
