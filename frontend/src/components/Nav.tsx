@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +18,8 @@ export default function Nav() {
   const { theme, toggleTheme } = useTheme();
   const { lite, toggleLite } = useLite();
   const { lang, setLang, t } = useI18n();
+  // Public assets need the basePath prefix on the GitHub Pages static export.
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
   const LINKS = [
     { href: "/", label: t.nav.dashboard },
@@ -32,9 +35,24 @@ export default function Nav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--color-nav)] backdrop-blur-xl border-b border-[rgba(0,229,255,0.1)]">
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 h-[68px] flex items-center justify-between gap-2">
-        <Link href="/" className="font-display text-[1.15rem] sm:text-[1.45rem] font-extrabold tracking-wide shrink-0">
-          SL Tech <span className="glow-text">Radar</span>
-        </Link>
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="font-display text-[1.15rem] sm:text-[1.45rem] font-extrabold tracking-wide shrink-0">
+            SL Tech <span className="glow-text">Radar</span>
+          </Link>
+          <span
+            className="hidden sm:flex items-center ml-3 pl-3 border-l border-[rgba(0,229,255,0.15)]"
+            title="by Matroxx"
+            aria-label="by Matroxx"
+          >
+            <Image
+              src={`${basePath}/matroxx-logo.png`}
+              alt="by Matroxx"
+              width={480}
+              height={279}
+              className="h-7 w-auto dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.18)]"
+            />
+          </span>
+        </div>
 
         <nav className="hidden md:flex items-center gap-8">
           {LINKS.map((l) => {
