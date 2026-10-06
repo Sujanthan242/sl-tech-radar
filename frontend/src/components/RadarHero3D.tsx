@@ -256,7 +256,7 @@ export default function RadarHero3D({ candidates, runId, onNodeClick }: RadarHer
             ⏳ {hovered.deadline ? `${prettyDate(hovered.deadline)} · ${countdownLabel(hovered.deadline)}` : "date TBC"}
           </p>
           <p className="text-[0.7rem] font-mono text-[var(--color-faint)] truncate mt-1">
-            ↗ {hovered.url.replace(/^https?:\/\//, "").split("/")[0]}
+            ↗ {(hovered.url ?? "").replace(/^https?:\/\//, "").split("/")[0]}
           </p>
         </div>
       )}
