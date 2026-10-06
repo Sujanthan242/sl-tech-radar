@@ -356,7 +356,7 @@ export default function Review() {
                     {d.sources.map((s, si) => (
                       <a
                         key={si}
-                        href={s.url}
+                        href={s.url ?? "#"}
                         target="_blank"
                         rel="noreferrer"
                         className="group rounded-xl border border-[rgba(0,229,255,0.16)] bg-[var(--color-inset)] p-3.5 hover:border-[var(--color-neon)] hover:shadow-[0_0_16px_rgba(0,229,255,0.25)] transition-all"
@@ -366,7 +366,7 @@ export default function Review() {
                           {s.title}
                         </p>
                         <p className="text-[0.7rem] font-mono text-[var(--color-faint)] truncate group-hover:text-[var(--color-neon)] transition-colors">
-                          ↗ {s.url.replace(/^https?:\/\//, "")}
+                          ↗ {(s.url ?? "").replace(/^https?:\/\//, "")}
                         </p>
                       </a>
                     ))}
