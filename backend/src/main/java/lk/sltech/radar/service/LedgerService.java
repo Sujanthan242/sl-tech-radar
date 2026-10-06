@@ -27,7 +27,7 @@ public class LedgerService {
             try { s = Enums.LedgerStatus.valueOf(status.toLowerCase()); }
             catch (IllegalArgumentException ignored) {}
         }
-        return ledger.search(q == null || q.isBlank() ? null : q, k, s).stream()
+        return ledger.search(q == null || q.isBlank() ? "" : q, k, s).stream()
                 .map(ApiDtos.LedgerEventDto::from)
                 .toList();
     }
